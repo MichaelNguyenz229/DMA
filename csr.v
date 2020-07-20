@@ -9,7 +9,7 @@ module csr
     input [3:0] csr_addr_i,
     input [31:0] csr_wr_data_i,
 
-    input [1:0] csr_be_i,
+    input [3:0] csr_be_i,
 
     output csr_wait_rq_o,
     output [31:0] csr_rd_data_o
@@ -17,6 +17,10 @@ module csr
 
 //internal signals
 csr_reg_hit [2:0];
+
+csr_control_reg [31:0];
+csr_status_reg [31:0];
+csr_descriptor_pointer_reg [31:0];
 
 //state machine
 typedef enum logic [2:0] {IDLE, WR_EN, WAIT_READ_1, WAIT_READ_2, RD_VALID} State;
@@ -60,14 +64,50 @@ always @*
     always @*
     begin
         case(csr_addr_i)
-            4'h0: csr_reg_hit = 001;
-            4'h4: csr_reg_hit = 010;
-            4'h8: csr_reg_hit = 100;
-            default: csr_reg_hit = 000;
+            4'h0: csr_reg_hit[2:0] = 001;
+            4'h4: csr_reg_hit[2:0] = 010;
+            4'h8: csr_reg_hit[2:0] = 100;
+            default: csr_reg_hit[2:0] = 000;
     end
 
-    //reg file
+    always @ (posedge clk)
+        if(reset)
+            csr_wr_en_reg[2:0] <= 3'h0;
+        else
+            csr_wr_en_reg[2:0] <= csr_reg_hit[2:0]
+
+
+    //REG FILE SECTION
+
+    //Control Register
+    always @ (posedge clk)
+        if(reset)
+            csr_control_reg[7:0] <= 8'h0; 
+        else if(csr_wr_en_reg[0] & csr_be_i[0])
+            csr_control_reg[7:0] <= csr_wr_data_i[7:0];
+
+    always @ (posedge clk)
+        if(reset)
+            csr_control_reg[15:8] <= 8'h0; 
+        else if(csr_wr_en_reg[0] & csr_be_i[1])
+            csr_control_reg[15:8] <= csr_wr_data_i[15:8];
+
+    always @ (posedge clk)
+        if(reset)
+            csr_control_reg[23:16] <= 8'h0; 
+        else if(csr_wr_en_reg[0] & csr_be_i[2])
+            csr_control_reg[23:16] <= csr_wr_data_i[23:16];
+
+    always @ (posedge clk)
+        if(reset)
+            csr_control_reg[31:24] <= 8'h0; 
+        else if(csr_wr_en_reg[0] & csr_be_i[3])
+            csr_control_reg[31:24] <= csr_wr_data_i[31:24];
     
+    //Status Register
+
+    //Next Descriptor Pointer Register
+
 
 
 
