@@ -16,15 +16,19 @@ module csr
 );
 
 //internal signals
-reg csr_reg_hit [2:0];
+reg [2:0] csr_reg_hit;
 
-reg csr_wr_en_reg [2:0];
+reg [2:0] csr_wr_en_reg;
 
-reg csr_control_reg [31:0];
-reg csr_status_reg [31:0];
-reg csr_descriptor_pointer_reg [31:0];
+reg [31:0] csr_control_reg;
+reg [31:0] csr_status_reg;
+reg [31:0] csr_descriptor_pointer_reg;
 
-reg rd_data_mux [31:0];
+reg [31:0] rd_data_mux;
+
+ wire wr_en_state;
+ wire rd_valid_state;
+ wire csr_ready; 
 
 //state machine
 typedef enum logic [2:0] {IDLE, WR_EN, WAIT_READ_1, RD_VALID} State;
