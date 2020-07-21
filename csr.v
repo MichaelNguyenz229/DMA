@@ -27,7 +27,7 @@ reg csr_descriptor_pointer_reg [31:0];
 reg rd_data_mux [31:0];
 
 //state machine
-typedef enum logic [2:0] {IDLE, WR_EN, WAIT_READ_1, WAIT_READ_2, RD_VALID} State;
+typedef enum logic [2:0] {IDLE, WR_EN, WAIT_READ_1, RD_VALID} State;
 
 State current_state, next_state;
 
@@ -52,9 +52,6 @@ always @*
             next_state <= IDLE;
 
         WAIT1:
-            next_state <= WAIT_READ_2;
-
-        WAIT2:
             next_state <= RD_VALID;
 
         RD_VALID:
@@ -64,16 +61,20 @@ always @*
             next_state <= IDLE;
     endcase
 
-    //state machine output assignement
+    //state machine output assignment
+    assign wr_en_state = (current_state[2:0] == WR_EN);
+    assign rd_valid_state = (current_state[2:0] == RD_VALID);
+    assign csr_ready = (wr_en_state | rd_valid_state);
+    assign csr_wait_rq_o = ~csr_ready
 
     //decoder
     always @*
     begin
         case(csr_addr_i)
-            4'h0: csr_reg_hit[2:0] = 001;
-            4'h4: csr_reg_hit[2:0] = 010;
-            4'h8: csr_reg_hit[2:0] = 100;
-            default: csr_reg_hit[2:0] = 000;
+            4'h0: csr_reg_hit[2:0] <= 3'b001;
+            4'h4: csr_reg_hit[2:0] <= 3'b010;
+            4'h8: csr_reg_hit[2:0] <= 3'b100;
+            default: csr_reg_hit[2:0] <= 3'b000;
     end
 
     always @ (posedge clk)
