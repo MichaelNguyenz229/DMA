@@ -26,12 +26,15 @@ reg [2:0] next_state;
 wire owned_by_hw;
 wire park;
 wire run;
+reg [3:0] desc_burst_counter;
 
 wire ld_first_ptr_state;
 wire send_read_state;
 wire wait_data_state;
 wire check_desc_state;
 wire wait_run_clr_state;
+
+reg [31:0] desc_reg [0:7];
 
 //state machine
 localparam IDLE = 3'b000;
@@ -94,5 +97,21 @@ assign wait_data_state = (current_state[2:0] == WAIT_DATA);
 assign check_desc_state = (current_state[2:0] == CHECK_DESC);
 assign wait_run_clr_state = (current_state[2:0] == WAIT_RUN_CLR);
 
+//Burst counter
+always @ (posedge clk)
+    if(reset | send_read_state)
+        desc_burst_counter <= 4'h0;
+    else if(dma_desc_fetch_readdatavalid_i)
+        desc_burst_counter <= desc_burst_counter + 1'b1;
 
+//Descriptor collection
+for(int i = 0; i < 8; i++)
+    begin
+       always @ (posedge clk)
+        if(reset)
+            desc_reg[31:0][i] <= 32'h0;
+        else if(desc_burst_counter == i & dma_desc_fetch_readdatavalid_i)
+            desc_reg[31:0][i] <= dma_desc_fetch_rddata_i[31:0]; 
+    end
 
+assign owned_by_hw = desc_reg[31][7]
