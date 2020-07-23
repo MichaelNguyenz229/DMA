@@ -27,12 +27,18 @@ wire owned_by_hw;
 wire park;
 wire run;
 
+wire ld_first_ptr_state;
+wire send_read_state;
+wire wait_data_state;
+wire check_desc_state;
+wire wait_run_clr_state;
+
 //state machine
-localparam IDLE = 4'b0000;
-localparam LD_FIRST_PT = 3'b001;
+localparam IDLE = 3'b000;
+localparam LD_FIRST_PTR = 3'b001;
 localparam SEND_READ = 3'b010;
 localparam WAIT_DATA = 3'b011;
-localparam CHECK_DES = 3'b100;
+localparam CHECK_DESC = 3'b100;
 localparam WAIT_RUN_CLR = 3'b101;
 
 always @ (posedge clk)
@@ -45,11 +51,11 @@ always @*
     case(current_state)
         IDLE:
             if(run)
-                next_state <= LD_FIRST_PT;
+                next_state <= LD_FIRST_PTR;
             else
                 next_state <= IDLE;
 
-        LD_FIRST_PT:
+        LD_FIRST_PTR:
             next_state <= SEND_READ;
 
         SEND_READ:
@@ -59,18 +65,18 @@ always @*
                 next_state <= WAIT_DATA;
         
         WAIT_DATA:
-            if(dma_desc_fetch_bcount_o == 4'b1000)
-                next_state <= CHECK_DES;
+            if(desc_burst_counter == 4'b1000)
+                next_state <= CHECK_DESC;
             else
                 next_state <= WAIT_DATA;
         
-        CHECK_DES:
+        CHECK_DESC:
             if(owned_by_hw == 1'b1)
                 next_state <= SEND_READ;
-            else if((owned_by_hw == 1'b0) & (park == 1'b1))
-                next_state <= LD_FIRST_PT;
-            else
+            else if((owned_by_hw == 0'b0) & (park == 0'b1))
                 next_state <= WAIT_RUN_CLR;
+            else
+                next_state <=LD_FIRST_PTR;
         
         WAIT_RUN_CLR:
             if(run == 1'b0)
@@ -81,7 +87,12 @@ always @*
             next_state <= IDLE;
     endcase
 
-
+//State machine signal assignemnt
+assign ld_first_ptr_state = (current_state[2:0] == LD_FIRST_PTR);
+assign send_read_state = (current_state[2:0] == SEND_READ);
+assign wait_data_state = (current_state[2:0] == WAIT_DATA);
+assign check_desc_state = (current_state[2:0] == CHECK_DESC);
+assign wait_run_clr_state = (current_state[2:0] == WAIT_RUN_CLR);
 
 
 
