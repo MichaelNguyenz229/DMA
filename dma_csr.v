@@ -12,13 +12,13 @@ module dma_csr
     input [3:0] csr_be_i,
 
     output csr_wait_rq_o,
-    output wire [31:0] csr_rd_data_o
+    output reg [31:0] csr_rd_data_o
 );
 
 //internal signals
 reg [2:0] csr_reg_hit;
 
-wire [2:0] csr_wr_en_reg;
+reg [2:0] csr_wr_en_reg;
 
 reg [31:0] csr_control_reg;
 reg [31:0] csr_status_reg;
@@ -86,13 +86,11 @@ always @*
         endcase
     end
 
-    /*always @ (posedge clk)
+    always @ (posedge clk)
         if(reset)
             csr_wr_en_reg[2:0] <= 3'h0;
         else
-            csr_wr_en_reg[2:0] <= csr_reg_hit[2:0];*/
-
-    assign csr_wr_en_reg = csr_reg_hit;
+            csr_wr_en_reg[2:0] <= csr_reg_hit[2:0];
 
 
     //REG FILE SECTION
@@ -182,12 +180,11 @@ always @*
                 default: rd_data_mux[31:0] <= 32'h0;
             endcase
         end
-    /*always @ (posedge clk)
+    always @ (posedge clk)
         if(reset)
             csr_rd_data_o[31:0] <= 32'h0;
         else
-            csr_rd_data_o[31:0] <= rd_data_mux[31:0];*/
-    assign csr_rd_data_o = rd_data_mux;
+            csr_rd_data_o[31:0] <= rd_data_mux[31:0];
 
 endmodule
 

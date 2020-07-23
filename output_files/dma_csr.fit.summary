@@ -1,0 +1,17 @@
+Fitter Status : Successful - Tue Jul 21 14:34:15 2020
+Quartus Prime Version : 20.1.0 Build 711 06/05/2020 SJ Standard Edition
+Revision Name : dma_csr
+Top-level Entity Name : dma_csr
+Family : Arria 10
+Device : 10AX115R4F40I3SG
+Timing Models : Final
+Logic utilization (in ALMs) : 46 / 427,200 ( < 1 % )
+Total registers : 98
+Total pins : 77 / 650 ( 12 % )
+Total virtual pins : 0
+Total block memory bits : 0 / 55,562,240 ( 0 % )
+Total RAM Blocks : 0 / 2,713 ( 0 % )
+Total DSP Blocks : 0 / 1,518 ( 0 % )
+Total HSSI RX channels : 0 / 66 ( 0 % )
+Total HSSI TX channels : 0 / 66 ( 0 % )
+Total PLLs : 0 / 138 ( 0 % )
