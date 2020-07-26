@@ -3,19 +3,25 @@ module dma_desc_fetch
     input clk,
     input reset,
 
+    //From CSR
     input [31:0] csr_control_i,
     input [31:0] csr_first_pointer_i,
 
-    output dma_desc_fetch_read_o,
+    //To AVMM master to descriptor memory
+    output dma_desc_fetch_read_o, 
     output [3:0] dma_desc_fetch_bcount_o,
-    output [31:0] dma_desc_fetch_addr_o
+    output [31:0] dma_desc_fetch_addr_o,
 
+    //From AVMM descriptor slave to master
     input dma_desc_fetch_waitrequest_i,
     input [31:0] dma_desc_fetch_rddata_i,
     input dma_desc_fetch_readdatavalid_i,
 
+    //To descriptor fifo
     output dma_desc_fifo_wr_o,
     output [255:0] dma_desc_fifo_wrdata_o,
+
+    //From descriptor fifo
     input dma_desc_fifo_full_i
 );
 
@@ -35,6 +41,8 @@ wire check_desc_state;
 wire wait_run_clr_state;
 
 reg [31:0] desc_reg [0:7];
+
+reg [31:0] desc_addr_register;
 
 //state machine
 localparam IDLE = 3'b000;
@@ -79,7 +87,7 @@ always @*
             else if((owned_by_hw == 0'b0) & (park == 0'b1))
                 next_state <= WAIT_RUN_CLR;
             else
-                next_state <=LD_FIRST_PTR;
+                next_state <= LD_FIRST_PTR;
         
         WAIT_RUN_CLR:
             if(run == 1'b0)
@@ -109,9 +117,29 @@ for(int i = 0; i < 8; i++)
     begin
        always @ (posedge clk)
         if(reset)
-            desc_reg[31:0][i] <= 32'h0;
+            desc_reg[i][31:0] <= 32'h0;
         else if(desc_burst_counter == i & dma_desc_fetch_readdatavalid_i)
-            desc_reg[31:0][i] <= dma_desc_fetch_rddata_i[31:0]; 
+            desc_reg[i][31:0] <= dma_desc_fetch_rddata_i[31:0]; 
     end
 
 assign owned_by_hw = desc_reg[31][7]
+assign park = csr_control_i[17]
+assign run = csr_control_i[5]
+
+//Address register
+always @ (posedge clk)
+    if(reset)
+        desc_addr_register <= 32'h0;
+    else if(ld_first_ptr_state)
+        desc_addr_register <= csr_first_pointer_i;
+    else if(check_desc_state)
+        desc_addr_register <= desc_reg[4];
+
+assign dma_desc_fetch_addr_o = desc_addr_register;
+assign dma_desc_fetch_read_o = send_read_state;
+assign dma_desc_fetch_bcount_o = 4'h8;
+
+assign dma_desc_fifo_wr_o = check_desc_state;
+assign dma_desc_fifo_wrdata_o = {desc_reg[7], desc_reg[6], desc_reg[5], desc_reg[4],
+desc_reg[3], desc_reg[2], desc_reg[1], desc_reg[0]};
+
