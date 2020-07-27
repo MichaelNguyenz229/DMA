@@ -51,6 +51,7 @@ localparam SEND_READ = 3'b010;
 localparam WAIT_DATA = 3'b011;
 localparam CHECK_DESC = 3'b100;
 localparam WAIT_RUN_CLR = 3'b101;
+localparam FIFO_WAIT = 3'b110;
 
 always @ (posedge clk)
     if(reset)
@@ -67,7 +68,10 @@ always @*
                 next_state <= IDLE;
 
         LD_FIRST_PTR:
-            next_state <= SEND_READ;
+            if(~dma_desc_fifo_full_i)
+                next_state <= SEND_READ
+            else
+                next_state <= LD_FIRST_PTR;
 
         SEND_READ:
             if(dma_desc_fetch_waitrequest_i)
@@ -82,12 +86,24 @@ always @*
                 next_state <= WAIT_DATA;
         
         CHECK_DESC:
-            if(owned_by_hw == 1'b1)
+            if(dma_desc_fifo_full_i)
+                next_state <= FIFO_WAIT;
+            else if(owned_by_hw == 1'b1)
                 next_state <= SEND_READ;
-            else if((owned_by_hw == 0'b0) & (park == 0'b1))
+            else if((~owned_by_hw) & (park))
+                next_state <= LD_FIRST_PTR;
+            else
+                next_state <= WAIT_RUN_CLR;
+                
+        FIFO_WAIT:
+            if(~dma_desc_fifo_full_i & owned_by_hw)
+                next_state <= SEND_READ;
+            else if(~dma_desc_fifo_full_i & ~owned_by_hw & park)
+                next_state <= LD_FIRST_PTR;
+            else if (~dma_desc_fifo_full_i & ~owned_by_hw & ~park)
                 next_state <= WAIT_RUN_CLR;
             else
-                next_state <= LD_FIRST_PTR;
+                next_state <= FIFO_WAIT;
         
         WAIT_RUN_CLR:
             if(run == 1'b0)
