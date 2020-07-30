@@ -19,7 +19,7 @@ module dma_desc_fetch
 
     //To descriptor fifo
     output dma_desc_fifo_wr_o,
-    output [255:0] dma_desc_fifo_wrdata_o,
+    output [264:0] dma_desc_fifo_wrdata_o,
 
     //From descriptor fifo
     input dma_desc_fifo_full_i
@@ -34,6 +34,7 @@ wire park;
 wire run;
 reg [3:0] desc_burst_counter;
 
+wire idle_state;
 wire ld_first_ptr_state;
 wire send_read_state;
 wire wait_data_state;
@@ -43,6 +44,8 @@ wire wait_run_clr_state;
 reg [31:0] desc_reg [0:7];
 
 reg [31:0] desc_addr_register;
+
+reg [7:0] desc_ID;
 
 //state machine
 localparam IDLE = 3'b000;
@@ -115,6 +118,7 @@ always @*
     endcase
 
 //State machine signal assignemnt
+assign idle_state = (current_state[2:0] == IDLE);
 assign ld_first_ptr_state = (current_state[2:0] == LD_FIRST_PTR);
 assign send_read_state = (current_state[2:0] == SEND_READ);
 assign wait_data_state = (current_state[2:0] == WAIT_DATA);
@@ -130,9 +134,18 @@ always @ (posedge clk)
     else
         desc_burst_counter <= desc_burst_counter;
 
+//ID counter
+always @ (posedge clk)
+    if(reset | idle_state)
+        desc_ID[7:0] <= 7'h0;
+    else if(check_desc_state)
+        desc_ID[7:0] <= desc_ID[7:0] + 7'h1;
+    else
+        desc_ID[7:0] <= desc_ID[7:0];
+
 //Descriptor collection
 genvar i;
-hello
+
 generate
 for (i=0; i<8; i=i+1)
     begin: DESC_COLs
@@ -162,7 +175,7 @@ assign dma_desc_fetch_read_o = send_read_state;
 assign dma_desc_fetch_bcount_o = 4'h8;
 
 assign dma_desc_fifo_wr_o = check_desc_state;
-assign dma_desc_fifo_wrdata_o = {desc_reg[7], desc_reg[6], desc_reg[5], desc_reg[4],
+assign dma_desc_fifo_wrdata_o[264:0] = {~owned_by_hw, desc_ID[7:0], desc_reg[7], desc_reg[6], desc_reg[5], desc_reg[4],
 desc_reg[3], desc_reg[2], desc_reg[1], desc_reg[0]};
 
 endmodule
