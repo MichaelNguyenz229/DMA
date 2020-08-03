@@ -27,7 +27,9 @@ module dma_write_block
     input dma_status_fifo_almost_full_i,
 
     //from dma data fifo
-    output [255:0] dma_wr_data
+    input [255:0] dma_data,
+    input dma_data_fifo_empty
+
 );
 
 //internal signals
@@ -38,6 +40,14 @@ wire wr_fifo_empty;
 
 reg [2:0] current_state;
 reg [2:0] next_state;
+
+reg [47:0] wr_cmd_reg;
+
+reg tc;
+reg [10:0] transfer_count;
+reg [10:0] bcount_reg;
+wire [15:0] bytes_to_transfer;
+
 
 //write block fifo
 scfifo	write_block_fifo (
@@ -67,6 +77,9 @@ scfifo	write_block_fifo (
 		write_block_fifo.underflow_checking = "ON",
 		write_block_fifo.use_eab = "ON";
 
+//
+assign wr_fifo_data_in = {dma_wr_bytes_to_transfer_i, dma_wr_addr_i};
+
 //write block state machine
 localparam IDLE = 3'b00;
 localparam RD_CMD_FIFO = 3'b001;
@@ -84,19 +97,37 @@ always @ (posedge clk)
 always @*
     case(current_state)
         IDLE:
+            if(wr_fifo_empty)
+                next_state <= IDLE;
+            else
+                next_state <= RD_CMD_FIFO;
 
         RD_CMD_FIFO:
+            next_state <= LD_CMD_REG;
 
         LD_CMD_REG:
+            next_state <= CHECK_XFR;
 
         CHECK_XFR:
+            if(~dma_data_fifo_empty & ~tc & ~wr_master_wait_req_i)
+                next_state <= XFR_DATA;
+            else
+                next_state <= CHECK_XFR;
 
         XFR_DATA:
+            if(tc)
+                next_state <= UPDATE_STATUS;
+            else if(~dma_data_fifo_empty & ~tc & ~wr_master_wait_req_i)
+                next_state <= XFR_DATA;
+            else
+                next_state <= CHECK_XFR;
 
         UPDATE_STATUS:
+            next_state <= IDLE;
 
         default:
-        
+            next_state <= IDLE;
+
     endcase
 
 //state machine assignment
@@ -106,3 +137,26 @@ assign ld_cmd_reg_state = (current_state[2:0] == LD_CMD_REG);
 assign check_xfr_state = (current_state[2:0] == CHECK_XFR);
 assign xfr_data_state = (current_state[2:0] == XFR_DATA);
 assign update_status_state = (current_state[2:0] == UPDATE_STATUS);
+
+//latch cmd
+always @ (posedge clk)
+    if(ld_cmd_reg_state)
+        wr_cmd_reg[47:0] <= wr_fifo_data_q[47:0];
+
+//transfer counter
+always @ (posedge clk)
+    if(reset)
+        transfer_count <= 11'h0;
+    else if(xfr_data_state)
+        transfer_count[10:0] <= transfer_count[10:0] - 1'b1;
+    else
+        transfer_count[10:0] <= transfer_count[10:0];
+
+assign tc = (transfer_count[10:0] == 11'h0);
+assign bytes_to_transfer[15:0] = wr_cmd_reg[47:32];
+
+always @ (posedge clk)
+    bcount_reg <= bytes_to_transfer[15:0] + | bytes_to_transfer[4:0];
+
+
+
