@@ -48,6 +48,9 @@ reg [10:0] transfer_count;
 reg [10:0] bcount_reg;
 wire [15:0] bytes_to_transfer;
 
+reg [255:0] wr_master_data_reg;
+
+reg [15:0] actual_bytes_transfered_reg;
 
 //write block fifo
 scfifo	write_block_fifo (
@@ -143,20 +146,43 @@ always @ (posedge clk)
     if(ld_cmd_reg_state)
         wr_cmd_reg[47:0] <= wr_fifo_data_q[47:0];
 
+assign bytes_to_transfer[15:0] = wr_cmd_reg[47:32];
+
+always @ (posedge clk)
+    if(ld_cmd_reg_state)
+        transfer_count[10] <= bytes_to_transfer[15:5] + |(bytes_to_transfer[4:0]);
+
 //transfer counter
 always @ (posedge clk)
     if(reset)
-        transfer_count <= 11'h0;
+        transfer_count <= bytes_to_transfer[15:5] + |(bytes_to_transfer[4:0]);
     else if(xfr_data_state)
         transfer_count[10:0] <= transfer_count[10:0] - 1'b1;
     else
         transfer_count[10:0] <= transfer_count[10:0];
 
 assign tc = (transfer_count[10:0] == 11'h0);
-assign bytes_to_transfer[15:0] = wr_cmd_reg[47:32];
+
+//bcount
+always @ (posedge clk)
+    bcount_reg[10:0] <= bytes_to_transfer[15:5] + |(bytes_to_transfer[4:0]);
+
+assign wr_master_bcount_o[10:0] = bcount_reg[10:0];
+assign wr_master_addr_o[31:0] = wr_cmd_reg[31:0];
+
+//write data
+always @ (posedge clk)
+    wr_master_data_reg[255:0] <= dma_data[255:0];
+
+assign wr_master_data_o[255:0] = wr_master_data_reg[255:0];
+
+//update status
+assign dma_status_fifo_wr_req_o = update_status_state;
 
 always @ (posedge clk)
-    bcount_reg <= bytes_to_transfer[15:0] + | bytes_to_transfer[4:0];
+    if(update_status_state)
+        actual_bytes_transfered_reg[15:0] <= bytes_to_transfer[15:0]
 
-
-
+assign  dma_status_fifo_data_o[] = actual_bytes_transfered_reg[15:0];
+assign dma_status_fifo_data_o[] =
+assign dma_status_fifo_data_o[] = 
