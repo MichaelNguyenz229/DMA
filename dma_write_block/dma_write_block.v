@@ -15,6 +15,8 @@ module dma_write_block
     input dma_wr_fifo_command_req_i,
     input [15:0] dma_wr_bytes_to_transfer_i,
     input [31:0] dma_wr_addr_i,
+    input [7:0] dma_desc_id_i,
+    input dma_owned_by_hw_i,
 
     //to desc processor
     output dma_wr_fifo_full_o,
@@ -43,7 +45,7 @@ reg [2:0] next_state;
 
 reg [47:0] wr_cmd_reg;
 
-reg tc;
+wire tc;
 reg [10:0] transfer_count;
 reg [10:0] bcount_reg;
 wire [15:0] bytes_to_transfer;
@@ -52,11 +54,20 @@ reg [255:0] wr_master_data_reg;
 
 reg [15:0] actual_bytes_transfered_reg;
 
+reg [7:0] dma_desc_id_reg;
+reg dma_owned_by_hw_reg;
+
+wire rd_cmd_fifo_state;
+wire ld_cmd_reg_state;
+//wire check_xfr_state;
+wire xfr_data_state;
+wire update_status_state;
+
 //write block fifo
 scfifo	write_block_fifo (
 				.clock (clk),
 				.data (wr_fifo_data_in),
-				.rdreq (state),
+				.rdreq (rd_cmd_fifo_state),
 				.sclr (reset),
 				.wrreq (dma_wr_fifo_command_req_i),
 				.almost_full (),
@@ -134,10 +145,9 @@ always @*
     endcase
 
 //state machine assignment
-assign idle_state = (current_state[2:0] == IDLE);
 assign rd_cmd_fifo_state = (current_state[2:0] == RD_CMD_FIFO);
 assign ld_cmd_reg_state = (current_state[2:0] == LD_CMD_REG);
-assign check_xfr_state = (current_state[2:0] == CHECK_XFR);
+//assign check_xfr_state = (current_state[2:0] == CHECK_XFR);
 assign xfr_data_state = (current_state[2:0] == XFR_DATA);
 assign update_status_state = (current_state[2:0] == UPDATE_STATUS);
 
@@ -148,14 +158,10 @@ always @ (posedge clk)
 
 assign bytes_to_transfer[15:0] = wr_cmd_reg[47:32];
 
-always @ (posedge clk)
-    if(ld_cmd_reg_state)
-        transfer_count[10] <= bytes_to_transfer[15:5] + |(bytes_to_transfer[4:0]);
-
 //transfer counter
 always @ (posedge clk)
-    if(reset)
-        transfer_count <= bytes_to_transfer[15:5] + |(bytes_to_transfer[4:0]);
+    if(reset | ld_cmd_reg_state)
+        transfer_count[10:0] <= bytes_to_transfer[15:5] + |(bytes_to_transfer[4:0]);
     else if(xfr_data_state)
         transfer_count[10:0] <= transfer_count[10:0] - 1'b1;
     else
@@ -181,8 +187,16 @@ assign dma_status_fifo_wr_req_o = update_status_state;
 
 always @ (posedge clk)
     if(update_status_state)
-        actual_bytes_transfered_reg[15:0] <= bytes_to_transfer[15:0]
+        actual_bytes_transfered_reg[15:0] <= bytes_to_transfer[15:0];
 
-assign  dma_status_fifo_data_o[] = actual_bytes_transfered_reg[15:0];
-assign dma_status_fifo_data_o[] =
-assign dma_status_fifo_data_o[] = 
+always @ (posedge clk)
+    if(update_status_state)
+        dma_desc_id_reg[7:0] <= dma_desc_id_i[7:0];
+
+always @ (posedge clk)
+    if(update_status_state)
+        dma_owned_by_hw_reg <= dma_owned_by_hw_i;
+
+assign  dma_status_fifo_data_o[24:0] = {dma_owned_by_hw_reg, dma_desc_id_reg[7:0], actual_bytes_transfered_reg[15:0]};
+
+endmodule
