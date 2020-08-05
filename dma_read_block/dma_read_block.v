@@ -34,10 +34,8 @@ wire rd_fifo_empty;
 reg [1:0] current_state;
 reg [1:0] next_state;
 
-wire idle_state;
 wire rd_fifo_state;
-wire ld_state_state;
-wire send_rd_state;
+wire ld_reg_state;
 
 reg [47:0] command_fifo_reg;
 
@@ -49,7 +47,7 @@ reg[255:0] rd_master_data_reg;
 reg rd_master_data_valid_reg;
 
 //read fifo data
-assign rd_fifo_data = {dma_rd_bytes_to_transfer_i, dma_rd_addr_i};
+assign rd_fifo_data_in = {dma_rd_bytes_to_transfer_i, dma_rd_addr_i};
 
 //read block fifo
 scfifo	read_block_fifo (
@@ -80,10 +78,10 @@ scfifo	read_block_fifo (
 		read_block_fifo.use_eab = "ON";
 
 //read block state machine
-localparam IDLE = 3'b00;
-localparam RD_FIFO = 3'b01;
-localparam LD_REG = 3'b10;
-localparam SEND_RD = 3'b11;
+localparam IDLE = 2'b00;
+localparam RD_FIFO = 2'b01;
+localparam LD_REG = 2'b10;
+localparam SEND_RD = 2'b11;
 
 always @(posedge clk)
     if(reset)
@@ -113,10 +111,10 @@ always @*
     endcase
 
 //state machine assignment
-assign idle_state = (current_state[1:0] == IDLE);
 assign rd_fifo_state = (current_state[1:0] == RD_FIFO);
 assign ld_reg_state = (current_state[1:0] == LD_REG);
-assign send_rd_state = (current_state[1:0] == SEND_RD);
+
+//signal to read from fifo? when does it output data q?
 
 //latch reg
 always @ (posedge clk)
@@ -127,8 +125,8 @@ always @ (posedge clk)
 assign bytes_to_transfer = command_fifo_reg[47:32];
 
 always @ (posedge clk)
-    if(reset)
-        bcount_reg[10:0] <= bytes_to_transfer[15:5] + | command_fifo_reg[4:0];
+//iff reset
+    bcount_reg[10:0] <= bytes_to_transfer[15:5] + | bytes_to_transfer[4:0];
 
 assign rd_master_bcount_o[10:0] = bcount_reg[10:0];
 assign rd_master_addr_o[31:0] = command_fifo_reg[31:0];
@@ -142,5 +140,7 @@ always @ (posedge clk)
 
 assign dma_rd_data_o[255:0] = rd_master_data_reg;
 assign dma_rd_data_valid_o = rd_master_data_valid_reg;
+
+//signal when rd fifo full?
 
 endmodule
