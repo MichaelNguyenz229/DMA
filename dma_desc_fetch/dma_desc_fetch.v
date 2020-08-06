@@ -37,9 +37,7 @@ reg [3:0] desc_burst_counter;
 wire idle_state;
 wire ld_first_ptr_state;
 wire send_read_state;
-wire wait_data_state;
 wire check_desc_state;
-wire wait_run_clr_state;
 
 reg [31:0] desc_reg [0:7];
 
@@ -121,9 +119,7 @@ always @*
 assign idle_state = (current_state[2:0] == IDLE);
 assign ld_first_ptr_state = (current_state[2:0] == LD_FIRST_PTR);
 assign send_read_state = (current_state[2:0] == SEND_READ);
-assign wait_data_state = (current_state[2:0] == WAIT_DATA);
 assign check_desc_state = (current_state[2:0] == CHECK_DESC);
-assign wait_run_clr_state = (current_state[2:0] == WAIT_RUN_CLR);
 
 //Burst counter
 always @ (posedge clk)
