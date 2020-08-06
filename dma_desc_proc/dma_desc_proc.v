@@ -9,16 +9,18 @@ module dma_desc_proc
 
     //to read block
     output dma_rd_fifo_command_rq_o,
-    output dma_rd_bytes_to_transfer_o,
-    output [31:0]dma_rd_addr_o,
+    output [15:0] dma_rd_bytes_to_transfer_o,
+    output [31:0] dma_rd_addr_o,
 
     //from read block
     input dma_rd_fifo_full_i,
 
     //to write block
     output dma_wr_fifo_command_rq_o,
-    output dma_wr_bytes_to_transfer_o,
-    output [31:0]dma_wr_addr_o,
+    output [15:0] dma_wr_bytes_to_transfer_o,
+    output [31:0] dma_wr_addr_o,
+    output [7:0] dma_desc_id_o,
+    output dma_owned_by_hw_o,
 
     //from write block
     input dma_wr_fifo_full_i
@@ -41,7 +43,7 @@ wire desc_fifo_empty;
 reg [264:0] descriptor_register;
 
 //Fifo instance 
-scfifo	scfifo_component (
+scfifo	descriptor_fifo (
 				.clock (clk),
 				.data (dma_desc_fifo_wrdata_i),
 				.rdreq (desc_rd_fifo_state),
@@ -56,17 +58,17 @@ scfifo	scfifo_component (
 				.full (),
 				.usedw ());
 	defparam
-		scfifo_component.add_ram_output_register = "OFF",
-		scfifo_component.almost_full_value = 24,
-		scfifo_component.intended_device_family = "Cyclone V",
-		scfifo_component.lpm_numwords = 32,
-		scfifo_component.lpm_showahead = "OFF",
-		scfifo_component.lpm_type = "scfifo",
-		scfifo_component.lpm_width = 265,
-		scfifo_component.lpm_widthu = 5,
-		scfifo_component.overflow_checking = "ON",
-		scfifo_component.underflow_checking = "ON",
-		scfifo_component.use_eab = "ON";
+		descriptor_fifo.add_ram_output_register = "OFF",
+		descriptor_fifo.almost_full_value = 24,
+		descriptor_fifo.intended_device_family = "Cyclone V",
+		descriptor_fifo.lpm_numwords = 32,
+		descriptor_fifo.lpm_showahead = "OFF",
+		descriptor_fifo.lpm_type = "scfifo",
+		descriptor_fifo.lpm_width = 265,
+		descriptor_fifo.lpm_widthu = 5,
+		descriptor_fifo.overflow_checking = "ON",
+		descriptor_fifo.underflow_checking = "ON",
+		descriptor_fifo.use_eab = "ON";
 
 //state machine rd and wr command
 localparam DESC_IDLE = 3'b000;
@@ -109,6 +111,10 @@ assign desc_cmd_state = (desc_current_state[2:0] == DESC_CMD);
 always @ (posedge clk)
     if(desc_latch_desc_state)
         descriptor_register[264:0] <= dma_desc_fifo_out[264:0];
+
+//to the write block
+assign dma_desc_id_o[7:0] = descriptor_register[264:257];
+assign dma_owned_by_hw_o = descriptor_register[264];
 
 assign dma_wr_fifo_command_rq_o = desc_cmd_state;
 assign dma_rd_fifo_command_rq_o = desc_cmd_state;
