@@ -5,7 +5,7 @@ module dma_status_update
 
     //status from write block
     input dma_status_fifo_wr_req_i,
-    input [24:0]dma_wr_done_status_i,
+    input [24:0]dma_status_fifo_data_i,
 
     //status to write block
     output dma_status_fifo_almost_full_o,
@@ -35,14 +35,13 @@ module dma_status_update
 reg [2:0] current_state;
 reg [2:0] next_state;
 
-wire idle_state;
 wire rd_fifo_state;
 wire ld_reg_state;
-wire update_csr_state;
+wire update_csr_status_state;
 wire update_desc_state;
 wire irq_state;
 
-wire fifo_empty;
+wire status_fifo_empty;
 
 reg [24:0] status_fifo_data_q;
 reg [24:0] status_fifo_data_reg;
@@ -59,7 +58,7 @@ wire [31:0] dma_desc_update_addr;
 //status fifo
 scfifo	status_fifo (
 				.clock (clk),
-				.data (dma_wr_done_status_i),
+				.data (dma_status_fifo_data_i),
 				.rdreq (rd_fifo_state),
 				.sclr (reset),
 				.wrreq (dma_status_fifo_wr_req_i),
@@ -68,7 +67,7 @@ scfifo	status_fifo (
 				.aclr (),
 				.almost_empty (),
 				.eccstatus (),
-				.empty (fifo_empty),
+				.empty (status_fifo_empty),
 				.full (),
 				.usedw ());
 	defparam
@@ -104,7 +103,7 @@ always @*
     case(current_state)
 
         IDLE:
-            if(~fifo_empty)
+            if(~status_fifo_empty)
                 next_state <= RD_FIFO;
             else
                 next_state <= IDLE;
@@ -141,10 +140,9 @@ always @*
     endcase
 
 //state assignment
-assign idle_state = (current_state[2:0] == IDLE);
 assign rd_fifo_state = (current_state[2:0] == RD_FIFO);
 assign ld_reg_state = (current_state[2:0] == LD_REG);
-assign update_csr_state_state = (current_state[2:0] == UPDATE_CSR_STATUS);
+assign update_csr_status_state = (current_state[2:0] == UPDATE_CSR_STATUS);
 assign update_desc_state = (current_state[2:0] == UPDATE_DESC);
 assign irq_state = (current_state[2:0] == IRQ);
 
@@ -162,8 +160,12 @@ always @ (posedge clk)
         status_fifo_data_reg[24:0] <= status_fifo_data_q[24:0];
 
 //csr status update interface
-assign csr_status_update_req_o = update_csr_state;
-assign csr_status_update_data_o[31:0] = {csr_status_i[31:4], status_fifo_data_reg[24], 1'b1, csr_status_i[1:0]};
+assign csr_status_update_req_o = update_csr_status_state;
+
+//last desc
+assign dma_owned_by_hw = status_fifo_data_reg[24]
+
+assign csr_status_update_data_o[31:0] = {csr_status_i[31:4], dma_owned_by_hw, 1'b1, csr_status_i[1:0]};
 
 //master write interface for descriptor update
 assign dma_desc_update_wr_o = update_desc_state;
