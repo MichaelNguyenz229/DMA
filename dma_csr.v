@@ -13,6 +13,16 @@ module dma_csr
 
     output csr_wait_rq_o,
     output reg [31:0] csr_rd_data_o
+
+    //to status update
+    output [31:0] csr_control_o,
+    output [31:0] csr_status_o,
+    output [31:0] csr_next_pointer_o,
+
+    //csr status update
+    input [31:0] csr_status_update_data_i,
+    input csr_status_update_req_i,
+    output csr_status_update_ack_o
 );
 
 //internal signals
@@ -49,7 +59,7 @@ always @(posedge clk)
 always @*
     case(current_state)
         IDLE:
-            if(csr_wr_i)
+            if(csr_wr_i & ~csr_status_update_req_i)
                 next_state <= WR_EN;
             else if(csr_rd_i)
                 next_state <= WAIT_READ_1;
@@ -126,24 +136,32 @@ always @*
             csr_status_reg[7:0] <= 8'h0; 
         else if(csr_wr_en_reg[1] & csr_be_i[0] & wr_en_state)
             csr_status_reg[7:0] <= csr_wr_data_i[7:0];
+        else if(csr_status_update_ack_o)
+            csr_status_reg[7:0] <= csr_status_update_data_i[7:0];
 
     always @ (posedge clk)
         if(reset)
             csr_status_reg[15:8] <= 8'h0; 
         else if(csr_wr_en_reg[1] & csr_be_i[1] & wr_en_state)
             csr_status_reg[15:8] <= csr_wr_data_i[15:8];
+        else if(csr_status_update_ack_o)
+            csr_status_reg[15:8] <= csr_status_update_data_i[15:8];
 
     always @ (posedge clk)
         if(reset)
             csr_status_reg[23:16] <= 8'h0; 
         else if(csr_wr_en_reg[1] & csr_be_i[2] & wr_en_state)
             csr_status_reg[23:16] <= csr_wr_data_i[23:16];
+        else if(csr_status_update_ack_o)
+            csr_status_reg[23:16] <= csr_status_update_data_i[23:16];
 
     always @ (posedge clk)
         if(reset)
             csr_status_reg[31:24] <= 8'h0; 
         else if(csr_wr_en_reg[1] & csr_be_i[3] & wr_en_state)
             csr_status_reg[31:24] <= csr_wr_data_i[31:24];
+        else if(csr_status_update_ack_o)
+            csr_status_reg[31:24] <= csr_status_update_data_i[31:24];
 
     //Next Descriptor Pointer Register
     always @ (posedge clk)
@@ -180,11 +198,16 @@ always @*
                 default: rd_data_mux[31:0] <= 32'h0;
             endcase
         end
+
     always @ (posedge clk)
         if(reset)
             csr_rd_data_o[31:0] <= 32'h0;
         else
             csr_rd_data_o[31:0] <= rd_data_mux[31:0];
+
+    assign csr_control_o[31:0] = csr_control_reg[31:0];
+    assign csr_status_o[31:0] = csr_status_reg[31:0];
+    assign csr_next_pointer_o[31:0] = csr_descriptor_pointer_reg[31:0];
 
 endmodule
 
