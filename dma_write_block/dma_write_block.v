@@ -59,7 +59,9 @@ reg dma_owned_by_hw_reg;
 
 wire rd_cmd_fifo_state;
 wire ld_cmd_reg_state;
+
 //wire check_xfr_state;
+
 wire xfr_data_state;
 wire update_status_state;
 
