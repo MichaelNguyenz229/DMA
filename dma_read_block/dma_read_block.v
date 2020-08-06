@@ -125,7 +125,7 @@ always @ (posedge clk)
 assign bytes_to_transfer = command_fifo_reg[47:32];
 
 always @ (posedge clk)
-//iff reset
+//if reset
     bcount_reg[10:0] <= bytes_to_transfer[15:5] + | bytes_to_transfer[4:0];
 
 assign rd_master_bcount_o[10:0] = bcount_reg[10:0];
