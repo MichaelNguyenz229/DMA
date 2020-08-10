@@ -45,6 +45,7 @@ module sg_dma
     output [31:0] wr_master_addr_o,
     output [10:0] wr_master_bcount_o,
     output [255:0] wr_master_data_o,
+    output wr_master_o,
 
     //from AVMM master port (write module)
     input wr_master_wait_req_i
@@ -246,6 +247,7 @@ dma_write_block dma_write_block_instance
     .wr_master_addr_o (wr_master_addr_o),
     .wr_master_bcount_o (wr_master_bcount_o),
     .wr_master_data_o (wr_master_data_o),
+    .wr_master_o (wr_master_o),
 
     //from AVMM master port
     .wr_master_wait_req_i (wr_master_wait_req_i),

@@ -7,6 +7,7 @@ module dma_write_block
     output [31:0] wr_master_addr_o,
     output [10:0] wr_master_bcount_o,
     output [255:0] wr_master_data_o,
+    output wr_master_o,
 
     //from AVMM master port
     input wr_master_wait_req_i,
@@ -67,6 +68,8 @@ wire check_xfr_state;
 
 wire xfr_data_state;
 wire update_status_state;
+
+wire check_xfr_state_reg;
 
 //write block fifo
 scfifo	write_block_fifo (
@@ -204,5 +207,10 @@ always @ (posedge clk)
 
 assign  dma_status_fifo_data_o[24:0] = {dma_owned_by_hw_reg, dma_desc_id_reg[7:0], actual_bytes_transfered_reg[15:0]};
 assign dma_data_fifo_rd_req_o = check_xfr_state;
+
+always @ (posedge clk)
+    check_xfr_state_reg <= check_xfr_state;
+
+assign wr_master_o = check_xfr_state_reg;
 
 endmodule
