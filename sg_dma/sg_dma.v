@@ -10,7 +10,7 @@ module sg_dma
     input [31:0] csr_wr_data_i,
     input [3:0] csr_be_i,
     output csr_wait_rq_o,
-    output csr_rd_data_o,
+    output [31:0] csr_rd_data_o,
 
     //From AVMM descriptor slave to master (fetch module)
     input dma_desc_fetch_waitrequest_i,
