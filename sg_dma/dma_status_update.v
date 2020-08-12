@@ -172,7 +172,7 @@ assign csr_status_update_data_o[31:0] = {csr_status_i[31:4], dma_owned_by_hw, 1'
 assign dma_desc_update_wr_o = update_desc_state;
 assign dma_desc_update_data_o[31:0] = {16'h0, status_fifo_data_reg[15:0]};
 assign dma_desc_update_be_o[3:0] = 4'b1100;
-assign dma_desc_update_addr[31:0] = csr_first_pointer_i + (status_fifo_data_reg[23:16] * 5'h1c);
+assign dma_desc_update_addr[31:0] = csr_first_pointer_i + (status_fifo_data_reg[23:16] << 3'd5);
 
 //desc update addr register
 always @ (posedge clk)

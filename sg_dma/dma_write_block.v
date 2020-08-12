@@ -69,7 +69,9 @@ wire check_xfr_state;
 wire xfr_data_state;
 wire update_status_state;
 
-wire check_xfr_state_reg;
+reg check_xfr_state_reg;
+
+reg bytes_to_transfer_reg;
 
 //write block fifo
 scfifo	write_block_fifo (
@@ -166,10 +168,13 @@ always @ (posedge clk)
 
 assign bytes_to_transfer[15:0] = wr_cmd_reg[47:32];
 
+always @ (posedge clk)
+    bytes_to_transfer_reg <= |(bytes_to_transfer[4:0]);
+
 //transfer counter
 always @ (posedge clk)
     if(reset | ld_cmd_reg_state)
-        transfer_count[10:0] <= bytes_to_transfer[15:5] + |(bytes_to_transfer[4:0]);
+        transfer_count[10:0] <= bytes_to_transfer[15:5] + bytes_to_transfer_reg;
     else if(xfr_data_state)
         transfer_count[10:0] <= transfer_count[10:0] - 1'b1;
     else

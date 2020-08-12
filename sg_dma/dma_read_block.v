@@ -4,6 +4,7 @@ module dma_read_block
     input reset,
 
     //to AVMM master port
+    output rd_master_rd_o,
     output [31:0] rd_master_addr_o,
     output [10:0] rd_master_bcount_o,
 
@@ -45,6 +46,10 @@ reg [10:0] bcount_reg;
 
 reg[255:0] rd_master_data_reg;
 reg rd_master_data_valid_reg;
+
+wire send_rd_state;
+
+reg bytes_to_transfer_reg;
 
 //read fifo data
 assign rd_fifo_data_in = {dma_rd_bytes_to_transfer_i, dma_rd_addr_i};
@@ -113,6 +118,7 @@ always @*
 //state machine assignment
 assign rd_fifo_state = (current_state[1:0] == RD_FIFO);
 assign ld_reg_state = (current_state[1:0] == LD_REG);
+assign send_rd_state = (current_state[1:0] == SEND_RD);
 
 //signal to read from fifo? when does it output data q?
 
@@ -125,8 +131,11 @@ always @ (posedge clk)
 assign bytes_to_transfer = command_fifo_reg[47:32];
 
 always @ (posedge clk)
+    bytes_to_transfer_reg <= | bytes_to_transfer[4:0];
+
+always @ (posedge clk)
 //if reset
-    bcount_reg[10:0] <= bytes_to_transfer[15:5] + | bytes_to_transfer[4:0];
+    bcount_reg[10:0] <= bytes_to_transfer[15:5] + bytes_to_transfer_reg;
 
 assign rd_master_bcount_o[10:0] = bcount_reg[10:0];
 assign rd_master_addr_o[31:0] = command_fifo_reg[31:0];
@@ -142,5 +151,6 @@ assign dma_rd_data_o[255:0] = rd_master_data_reg;
 assign dma_rd_data_valid_o = rd_master_data_valid_reg;
 
 //signal when rd fifo full?
+assign rd_master_rd_o = send_rd_state;
 
 endmodule

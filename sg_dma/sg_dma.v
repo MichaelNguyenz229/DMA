@@ -35,6 +35,7 @@ module sg_dma
     //to AVMM master port (read module)
     output [31:0] rd_master_addr_o,
     output [10:0] rd_master_bcount_o,
+    output rd_master_rd_o,
 
     //from AVMM master port (read module)
     input rd_master_wait_req_i,
@@ -218,6 +219,7 @@ dma_read_block dma_read_block_instance
     //to AVMM master port
     .rd_master_addr_o (rd_master_addr_o),
     .rd_master_bcount_o (rd_master_bcount_o),
+    .rd_master_rd_o (rd_master_rd_o),
 
     //from AVMM master port
     .rd_master_wait_req_i (rd_master_wait_req_i),
